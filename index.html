@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es-419">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Ring Remapper</title>
+<style>
+:root{
+  --bg:#000;--card:#111214;--card2:#1a1c20;--line:#2a2d33;--txt:#f2f4f7;--mut:#8b919c;
+  --acc:#3e91ff;--ok:#34d399;--warn:#fbbf24;--err:#f87171;--r:22px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px}
+body{padding:env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 24px)}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 4px 8px}
+h1{font-size:1.35rem;margin:0;font-weight:700}
+h2{font-size:1rem;margin:0 0 12px;font-weight:600;color:var(--txt)}
+.card{background:var(--card);border-radius:var(--r);padding:16px;margin:12px 0;border:1px solid var(--line)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:999px;background:var(--card2);font-size:.8rem;color:var(--mut);border:1px solid var(--line)}
+.chip.on{color:var(--ok);border-color:var(--ok)}
+.chip.warn{color:var(--warn);border-color:var(--warn)}
+button,select,input[type=text]{font:inherit;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:14px;min-height:48px;padding:0 14px}
+button{cursor:pointer;transition:transform .08s,background .15s}
+button:active{transform:scale(.96)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.dng{color:var(--err)}
+button.sm{min-height:40px;padding:0 10px;font-size:.85rem}
+button:disabled{opacity:.4}
+#msg{margin:8px 0 0;padding:12px 14px;border-radius:14px;background:var(--card2);font-size:.9rem;display:none;line-height:1.35}
+#msg.err{display:block;color:var(--err)}#msg.ok{display:block;color:var(--ok)}#msg.info{display:block;color:var(--txt)}
+.ring{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,76px) 64px;gap:10px;max-width:320px;margin:4px auto}
+.z{display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:20px;background:var(--card2);border:1px solid var(--line)}
+.z.on{background:var(--acc);border-color:var(--acc);transform:scale(.95)}
+#z-up{grid-column:2;grid-row:1}#z-left{grid-column:1;grid-row:2}#z-center{grid-column:2;grid-row:2;border-radius:50%}
+#z-right{grid-column:3;grid-row:2}#z-down{grid-column:2;grid-row:3}
+#z-a{grid-column:1;grid-row:4;border-radius:50%}#z-b{grid-column:3;grid-row:4;border-radius:50%}
+#last{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.05rem;text-align:center;padding:10px;background:var(--card2);border-radius:14px;margin-top:10px;word-break:break-all}
+#last small{display:block;color:var(--mut);font-size:.75rem;margin-top:4px}
+.tbl{display:flex;flex-direction:column;gap:10px}
+.bind{background:var(--card2);border-radius:16px;padding:12px;border:1px solid var(--line)}
+.bind.flash{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.bind .sig{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;color:var(--acc);word-break:break-all;margin-bottom:8px}
+.bind .row>*{flex:1 1 120px}
+.bind input[type=text]{width:100%}
+label.sw{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--mut);font-size:.9rem}
+label.sw input{width:22px;height:22px;accent-color:var(--acc)}
+#log{height:220px;overflow:auto;background:#050506;border-radius:14px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.72rem;line-height:1.45;white-space:pre-wrap;word-break:break-all;color:#b8c0cc;margin:0}
+#scrollZone{height:120px;overflow:auto;background:var(--card2);border-radius:14px;padding:10px;color:var(--mut);font-size:.85rem}
+#scrollZone p{margin:0 0 14px}
+.big{font-size:2rem;font-weight:700;text-align:center}
+.mut{color:var(--mut);font-size:.85rem;line-height:1.4}
+#trk{font-size:.85rem;color:var(--mut);margin:6px 0}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ring Remapper</h1>
+  <button id="btnInstall" class="sm pri hide">Instalar</button>
+</header>
+
+<div class="chips">
+  <span class="chip" id="chBt">BLE: —</span>
+  <span class="chip" id="chGp">Gamepad: ninguno</span>
+  <span class="chip" id="chMs">Multimedia: inactiva</span>
+</div>
+<div id="msg"></div>
+
+<section class="card">
+  <h2>Captura en vivo</h2>
+  <div class="ring" id="ring">
+    <div class="z" id="z-up">▲</div><div class="z" id="z-left">◀</div><div class="z" id="z-center">⏯</div>
+    <div class="z" id="z-right">▶</div><div class="z" id="z-down">▼</div>
+    <div class="z" id="z-a">A</div><div class="z" id="z-b">B</div>
+  </div>
+  <div id="last">Presiona un botón del anillo<small>Toca una zona para probar su acción</small></div>
+  <div class="row" style="margin-top:12px">
+    <button id="btnMedia" class="pri" style="flex:1 1 100%">Activar captura multimedia</button>
+  </div>
+  <p class="mut">Los anillos suelen enlazarse en Android como teclado/multimedia HID. Empareja el anillo en Ajustes › Bluetooth del sistema; esta app lee lo que el sistema le entrega (teclas, Gamepad y acciones multimedia).</p>
+</section>
+
+<section class="card">
+  <h2>Perfil</h2>
+  <div class="row">
+    <select id="selProfile" style="flex:1 1 100%"></select>
+    <button id="btnNew" class="sm">Nuevo</button>
+    <button id="btnRename" class="sm">Renombrar</button>
+    <button id="btnExport" class="sm">Exportar</button>
+    <button id="btnImport" class="sm">Importar</button>
+    <button id="btnDelProfile" class="sm dng">Eliminar</button>
+  </div>
+  <input type="file" id="fileImport" accept="application/json,.json" class="hide">
+  <label class="sw"><input type="checkbox" id="chkLearn" checked> Agregar automáticamente botones nuevos a la tabla</label>
+  <label class="sw"><input type="checkbox" id="chkRepeat" checked> Ignorar repetición al mantener presionado</label>
+</section>
+
+<section class="card">
+  <h2>Asignación de botones</h2>
+  <div class="tbl" id="tbl"></div>
+  <p class="mut" id="tblEmpty">Sin asignaciones. Presiona botones del anillo para detectarlos.</p>
+</section>
+
+<section class="card">
+  <h2>Zona de prueba</h2>
+  <div id="trk">Sin pistas cargadas</div>
+  <div class="row">
+    <input type="file" id="fileAudio" accept="audio/*" multiple style="flex:1 1 100%;padding-top:10px">
+  </div>
+  <div class="row" style="margin:8px 0">
+    <span class="chip" id="chVol">Vol 70%</span>
+    <span class="chip" id="chPlay">Detenido</span>
+    <span class="chip" id="chCnt">Evento: 0</span>
+  </div>
+  <div id="scrollZone"></div>
+</section>
+
+<section class="card">
+  <h2>Bluetooth LE</h2>
+  <div class="row">
+    <button id="btnBle" class="pri" style="flex:1 1 100%">Conectar dispositivo BLE</button>
+    <button id="btnBleOff" class="sm hide">Desconectar</button>
+  </div>
+  <div class="mut" id="bleInfo" style="margin-top:10px">Web Bluetooth no puede leer los botones HID (el navegador bloquea ese servicio); aquí solo se consulta estado y batería. Los botones se capturan por las vías de arriba.</div>
+</section>
+
+<section class="card">
+  <h2>Consola de eventos</h2>
+  <pre id="log"></pre>
+  <div class="row" style="margin-top:10px">
+    <button id="btnCopy" class="sm">Copiar</button>
+    <button id="btnClear" class="sm">Limpiar</button>
+  </div>
+</section>
+
+<audio id="player" preload="auto"></audio>
+<audio id="keeper" loop></audio>
+
+<script>
+"use strict";
+/* ============ Utilidades ============ */
+const $ = (id) => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const ACTIONS = [
+  ["none", "Sin acción"], ["playpause", "Reproducir / Pausa"], ["play", "Reproducir"], ["pause", "Pausa"],
+  ["next", "Siguiente"], ["prev", "Anterior"], ["volup", "Subir volumen"], ["voldown", "Bajar volumen"],
+  ["mute", "Silenciar"], ["scrollup", "Desplazar arriba"], ["scrolldown", "Desplazar abajo"],
+  ["fullscreen", "Pantalla completa"], ["custom", "Evento personalizado"]
+];
+const ZONES = [["up", "Arriba"], ["down", "Abajo"], ["left", "Izquierda"], ["right", "Derecha"], ["center", "Centro"], ["a", "Botón A"], ["b", "Botón B"], ["otro", "Otro"]];
+
+/* ============ Registro de eventos ============ */
+class Logger {
+  constructor(el, max = 200) { this.el = el; this.max = max; this.lines = []; this.pending = false; }
+  add(tag, text) {
+    const d = new Date();
+    const t = d.toLocaleTimeString("es-MX", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0");
+    this.lines.push(`${t} [${tag}] ${text}`);
+    if (this.lines.length > this.max) this.lines.shift();
+    if (!this.pending) { this.pending = true; requestAnimationFrame(() => this.render()); }
+  }
+  render() {
+    this.pending = false;
+    this.el.textContent = this.lines.join("\n");
+    this.el.scrollTop = this.el.scrollHeight;
+  }
+  clear() { this.lines = []; this.render(); }
+  text() { return this.lines.join("\n"); }
+}
+
+/* ============ Almacenamiento ============ */
+class Store {
+  constructor() {
+    this.key = "ringRemapper.v1";
+    this.state = this.load();
+  }
+  defaultProfile() {
+    const b = (sig, zone, action, label) => ({ sig, zone, action, label });
+    return {
+      id: uid(), name: "Anillo genérico", bindings: [
+        b("key:ArrowUp", "up", "scrollup", "Arriba"),
+        b("key:ArrowDown", "down", "scrolldown", "Abajo"),
+        b("key:ArrowLeft", "left", "prev", "Izquierda"),
+        b("key:ArrowRight", "right", "next", "Derecha"),
+        b("key:Enter", "center", "playpause", "Centro"),
+        b("key:MediaPlayPause", "center", "playpause", "Play/Pausa"),
+        b("key:MediaTrackNext", "right", "next", "Siguiente"),
+        b("key:MediaTrackPrevious", "left", "prev", "Anterior"),
+        b("key:AudioVolumeUp", "up", "volup", "Vol +"),
+        b("key:AudioVolumeDown", "down", "voldown", "Vol −"),
+        b("ms:play", "center", "playpause", "Media play"),
+        b("ms:pause", "center", "playpause", "Media pausa"),
+        b("ms:nexttrack", "right", "next", "Media siguiente"),
+        b("ms:previoustrack", "left", "prev", "Media anterior")
+      ]
+    };
+  }
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && Array.isArray(s.profiles) && s.profiles.length) {
+          if (!s.profiles.some(p => p.id === s.active)) s.active = s.profiles[0].id;
+          return s;
+        }
+      }
+    } catch (e) { /* almacenamiento no disponible o corrupto */ }
+    const p = this.defaultProfile();
+    return { profiles: [p], active: p.id, autoLearn: true, ignoreRepeat: true };
+  }
+  save() {
+    try { localStorage.setItem(this.key, JSON.stringify(this.state)); return true; }
+    catch (e) { return false; }
+  }
+  get profile() { return this.state.profiles.find(p => p.id === this.state.active) || this.state.profiles[0]; }
+  validProfile(p) {
+    return p && typeof p.name === "string" && Array.isArray(p.bindings) &&
+      p.bindings.every(x => x && typeof x.sig === "string");
+  }
+}
+
+/* ============ Motor de acciones ============ */
+class Engine {
+  constructor(log, ui) {
+    this.log = log; this.ui = ui;
+    this.player = $("player"); this.playlist = []; this.idx = -1; this.count = 0;
+    this.player.volume = 0.7;
+    this.player.addEventListener("play", () => this.ui.setPlayState());
+    this.player.addEventListener("pause", () => this.ui.setPlayState());
+    this.player.addEventListener("ended", () => this.step(1));
+  }
+  setFiles(files) {
+    this.playlist.forEach(u => URL.revokeObjectURL(u.url));
+    this.playlist = Array.from(files).map(f => ({ name: f.name, url: URL.createObjectURL(f) }));
+    this.idx = this.playlist.length ? 0 : -1;
+    this.load();
+  }
+  load() {
+    if (this.idx < 0) { $("trk").textContent = "Sin pistas cargadas"; return; }
+    const t = this.playlist[this.idx];
+    this.player.src = t.url;
+    $("trk").textContent = `${this.idx + 1}/${this.playlist.length} · ${t.name}`;
+  }
+  step(d) {
+    if (!this.playlist.length) { this.ui.msg("info", "Carga archivos de audio en la zona de prueba."); return; }
+    this.idx = (this.idx + d + this.playlist.length) % this.playlist.length;
+    this.load();
+    this.player.play().catch(e => this.log.add("ERR", "play: " + e.name));
+  }
+  run(action) {
+    const p = this.player;
+    switch (action) {
+      case "playpause":
+        if (!p.src) { this.ui.msg("info", "Carga audio en la zona de prueba."); break; }
+        if (p.paused) p.play().catch(e => this.log.add("ERR", "play: " + e.name)); else p.pause(); break;
+      case "play": if (p.src) p.play().catch(e => this.log.add("ERR", "play: " + e.name)); break;
+      case "pause": p.pause(); break;
+      case "next": this.step(1); break;
+      case "prev": this.step(-1); break;
+      case "volup": p.volume = Math.min(1, +(p.volume + 0.1).toFixed(2)); this.ui.setVol(); break;
+      case "voldown": p.volume = Math.max(0, +(p.volume - 0.1).toFixed(2)); this.ui.setVol(); break;
+      case "mute": p.muted = !p.muted; this.ui.setVol(); break;
+      case "scrollup": $("scrollZone").scrollBy({ top: -120, behavior: "smooth" }); break;
+      case "scrolldown": $("scrollZone").scrollBy({ top: 120, behavior: "smooth" }); break;
+      case "fullscreen":
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        else document.documentElement.requestFullscreen().catch(e => this.log.add("ERR", "fullscreen: " + e.name));
+        break;
+      case "custom":
+        this.count++; $("chCnt").textContent = "Evento: " + this.count;
+        if (navigator.vibrate) navigator.vibrate(40);
+        window.dispatchEvent(new CustomEvent("ring:custom", { detail: { n: this.count } }));
+        break;
+      default: break;
+    }
+  }
+}
+
+/* ============ Captura de entrada ============ */
+class InputCapture {
+  constructor(store, engine, log, ui) {
+    this.store = store; this.engine = engine; this.log = log; this.ui = ui;
+    this.learnIdx = null;
+    this.gpPrev = {}; this.gpLoop = false;
+    this.keeperOn = false;
+    this.bind();
+  }
+  bind() {
+    const typing = (t) => t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) && t.type !== "checkbox" && t.type !== "file";
+    window.addEventListener("keydown", (e) => this.onKey(e, typing(e.target)), true);
+    window.addEventListener("keyup", (e) => {
+      this.log.add("KEYUP", `key=${e.key} code=${e.code || "-"} kc=${e.keyCode}`);
+    }, true);
+    window.addEventListener("gamepadconnected", (e) => {
+      this.log.add("GP", `conectado #${e.gamepad.index} ${e.gamepad.id}`);
+      this.ui.setGp(e.gamepad.id); this.startGp();
+    });
+    window.addEventListener("gamepaddisconnected", (e) => {
+      this.log.add("GP", `desconectado #${e.gamepad.index}`);
+      delete this.gpPrev[e.gamepad.index];
+      this.ui.setGp(null);
+    });
+    if (navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean)) this.startGp();
+  }
+  sigFromKey(e) {
+    let name = e.code && e.code !== "Unidentified" ? e.code : e.key;
+    if (!name || name === "Unidentified") name = "kc" + e.keyCode;
+    return "key:" + name;
+  }
+  onKey(e, isTyping) {
+    const sig = this.sigFromKey(e);
+    this.log.add("KEYDOWN", `key=${e.key} code=${e.code || "-"} kc=${e.keyCode}${e.repeat ? " (rep)" : ""} → ${sig}`);
+    if (isTyping && this.learnIdx === null) return;
+    const bound = this.store.profile.bindings.some(b => b.sig === sig);
+    if (bound || this.learnIdx !== null) e.preventDefault();
+    if (e.repeat && this.store.state.ignoreRepeat) return;
+    this.handle(sig);
+  }
+  handle(sig) {
+    const prof = this.store.profile;
+    this.ui.setLast(sig);
+    if (this.learnIdx !== null) {
+      const row = prof.bindings[this.learnIdx];
+      if (row) { row.sig = sig; this.store.save(); this.log.add("MAP", `fila ${this.learnIdx + 1} ← ${sig}`); }
+      this.learnIdx = null; this.ui.renderTable(); this.ui.msg("ok", "Botón asignado: " + sig);
+      return;
+    }
+    const matches = prof.bindings.filter(b => b.sig === sig);
+    if (!matches.length) {
+      if (this.store.state.autoLearn) {
+        prof.bindings.push({ sig, zone: "otro", action: "none", label: "Nuevo" });
+        this.store.save(); this.ui.renderTable();
+        this.log.add("MAP", "nuevo botón detectado: " + sig);
+      }
+      return;
+    }
+    matches.forEach(b => { this.ui.flash(b.zone); this.engine.run(b.action); });
+    this.ui.flashRows(sig);
+  }
+  /* Gamepad API: bucle rAF solo mientras haya un mando conectado */
+  startGp() {
+    if (this.gpLoop) return; this.gpLoop = true;
+    const tick = () => {
+      const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      if (!pads.length) { this.gpLoop = false; return; }
+      for (const pad of pads) {
+        const prev = this.gpPrev[pad.index] || (this.gpPrev[pad.index] = {});
+        pad.buttons.forEach((b, i) => {
+          const k = "b" + i, now = b.pressed;
+          if (now && !prev[k]) { this.log.add("GP", `botón ${i}`); this.handle("gp:b" + i); }
+          prev[k] = now;
+        });
+        pad.axes.forEach((v, i) => {
+          for (const dir of [1, -1]) {
+            const k = "a" + i + (dir > 0 ? "+" : "-"), now = v * dir > 0.6;
+            if (now && !prev[k]) { this.log.add("GP", `eje ${i}${dir > 0 ? "+" : "-"} (${v.toFixed(2)})`); this.handle("gp:a" + i + (dir > 0 ? "+" : "-")); }
+            prev[k] = now;
+          }
+        });
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  /* Media Session: requiere audio activo para que Chrome entregue las teclas multimedia */
+  silentWav() {
+    const rate = 8000, n = rate * 10, buf = new ArrayBuffer(44 + n), v = new DataView(buf); // 10 s: Chrome ignora audios muy cortos
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate, true);
+    v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128); // silencio digital (8 bits sin signo: 128 = cero)
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  async toggleKeeper() {
+    const a = $("keeper");
+    if (this.keeperOn) {
+      a.pause(); this.keeperOn = false; this.ui.setMs(false);
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "none";
+      return;
+    }
+    try {
+      if (!a.src) a.src = this.silentWav();
+      await a.play();
+      this.keeperOn = true; this.ui.setMs(true);
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: "Ring Remapper", artist: "Captura activa" });
+        navigator.mediaSession.playbackState = "playing";
+        ["play", "pause", "nexttrack", "previoustrack", "seekforward", "seekbackward", "stop"].forEach(act => {
+          try { navigator.mediaSession.setActionHandler(act, () => { this.log.add("MS", act); this.handle("ms:" + act); }); }
+          catch (e) { this.log.add("MS", `acción no soportada: ${act}`); }
+        });
+      } else this.log.add("MS", "Media Session no disponible");
+      this.ui.msg("ok", "Captura multimedia activa. Los botones multimedia del anillo llegarán como ms:*");
+    } catch (e) {
+      this.ui.msg("err", "No se pudo iniciar el audio de captura (" + e.name + "). Toca el botón de nuevo.");
+      this.log.add("ERR", "keeper: " + e.name);
+    }
+  }
+}
+
+/* ============ Bluetooth LE ============ */
+class BluetoothLink {
+  constructor(log, ui) { this.log = log; this.ui = ui; this.dev = null; }
+  async connect() {
+    if (!navigator.bluetooth) {
+      this.ui.msg("err", "Web Bluetooth no está disponible. Usa Chrome o Samsung Internet por HTTPS (en Brave está desactivado por defecto: brave://flags › Web Bluetooth API).");
+      return;
+    }
+    if (!window.isSecureContext) { this.ui.msg("err", "Web Bluetooth exige HTTPS o localhost. Abre la app desde tu GitHub Pages."); return; }
+    try {
+      if (navigator.bluetooth.getAvailability && !(await navigator.bluetooth.getAvailability())) {
+        this.ui.msg("err", "El Bluetooth del teléfono está apagado o no disponible. Actívalo e inténtalo de nuevo."); return;
+      }
+    } catch (e) { /* continúa; requestDevice informará el error */ }
+    try {
+      this.log.add("BLE", "solicitando dispositivo…");
+      this.dev = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true, optionalServices: ["battery_service", "device_information"]
+      });
+      this.dev.addEventListener("gattserverdisconnected", () => {
+        this.log.add("BLE", "desconectado"); this.ui.setBle(null, "Desconectado");
+        $("btnBleOff").classList.add("hide");
+      });
+      this.ui.setBle(true, "Conectando…");
+      const server = await this.dev.gatt.connect();
+      const name = this.dev.name || this.dev.id;
+      this.log.add("BLE", "conectado: " + name);
+      this.ui.setBle(true, name); $("btnBleOff").classList.remove("hide");
+      let info = `Dispositivo: ${name}`;
+      try {
+        const s = await server.getPrimaryService("battery_service");
+        const c = await s.getCharacteristic("battery_level");
+        const v = await c.readValue(); info += ` · Batería: ${v.getUint8(0)}%`;
+        try {
+          await c.startNotifications();
+          c.addEventListener("characteristicvaluechanged", (ev) => {
+            const lv = ev.target.value.getUint8(0); this.log.add("BLE", "batería " + lv + "%");
+            $("bleInfo").textContent = `Dispositivo: ${name} · Batería: ${lv}%`;
+          });
+        } catch (e) { /* sin notificaciones */ }
+      } catch (e) { info += " · Sin servicio de batería"; }
+      try {
+        const s = await server.getPrimaryService("device_information");
+        const c = await s.getCharacteristic("manufacturer_name_string");
+        info += " · Fabricante: " + new TextDecoder().decode(await c.readValue());
+      } catch (e) { /* opcional */ }
+      $("bleInfo").textContent = info;
+    } catch (e) {
+      this.log.add("ERR", `BLE ${e.name}: ${e.message}`);
+      const map = {
+        NotFoundError: "No se seleccionó ningún dispositivo (emparejamiento cancelado o sin resultados).",
+        SecurityError: "El navegador bloqueó el acceso Bluetooth. Se requiere HTTPS y un toque directo en el botón.",
+        NotAllowedError: "Permiso de Bluetooth denegado. Concédelo en los ajustes del sitio.",
+        NetworkError: "No se pudo conectar al dispositivo. Acércalo y verifica que no esté enlazado a otro equipo.",
+        NotSupportedError: "Este dispositivo o navegador no admite la operación solicitada.",
+        InvalidStateError: "Estado Bluetooth inválido. Reintenta."
+      };
+      this.ui.msg(e.name === "NotFoundError" ? "info" : "err", map[e.name] || ("Error Bluetooth: " + e.message));
+      this.ui.setBle(null, "—");
+    }
+  }
+  disconnect() {
+    if (this.dev && this.dev.gatt && this.dev.gatt.connected) this.dev.gatt.disconnect();
+  }
+}
+
+/* ============ Interfaz ============ */
+class UI {
+  constructor() { this.msgTimer = null; }
+  msg(kind, text) {
+    const m = $("msg"); m.className = kind; m.textContent = text;
+    clearTimeout(this.msgTimer);
+    this.msgTimer = setTimeout(() => { m.className = ""; m.textContent = ""; }, 7000);
+  }
+  setLast(sig) { $("last").firstChild.textContent = sig; }
+  flash(zone) {
+    const el = $("z-" + zone); if (!el) return;
+    el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 180);
+  }
+  flashRows(sig) {
+    document.querySelectorAll(".bind").forEach(r => {
+      if (r.dataset.sig === sig) { r.classList.add("flash"); setTimeout(() => r.classList.remove("flash"), 250); }
+    });
+  }
+  setGp(id) { const c = $("chGp"); c.textContent = id ? "Gamepad: conectado" : "Gamepad: ninguno"; c.classList.toggle("on", !!id); }
+  setMs(on) { const c = $("chMs"); c.textContent = "Multimedia: " + (on ? "activa" : "inactiva"); c.classList.toggle("on", on); $("btnMedia").textContent = on ? "Desactivar captura multimedia" : "Activar captura multimedia"; }
+  setBle(on, t) { const c = $("chBt"); c.textContent = "BLE: " + t; c.classList.toggle("on", on === true); }
+  setVol() { const p = $("player"); $("chVol").textContent = p.muted ? "Silenciado" : "Vol " + Math.round(p.volume * 100) + "%"; }
+  setPlayState() { $("chPlay").textContent = $("player").paused ? "Detenido" : "Reproduciendo"; }
+  fillSelect(sel, list, val) {
+    sel.textContent = "";
+    list.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); });
+    sel.value = val;
+  }
+  renderProfiles() {
+    const sel = $("selProfile"); sel.textContent = "";
+    app.store.state.profiles.forEach(p => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+    sel.value = app.store.state.active;
+  }
+  renderTable() {
+    const box = $("tbl"); box.textContent = "";
+    const bs = app.store.profile.bindings;
+    $("tblEmpty").classList.toggle("hide", bs.length > 0);
+    bs.forEach((b, i) => {
+      const r = document.createElement("div"); r.className = "bind"; r.dataset.sig = b.sig;
+      const sig = document.createElement("div"); sig.className = "sig"; sig.textContent = b.sig; r.appendChild(sig);
+      const row1 = document.createElement("div"); row1.className = "row";
+      const lab = document.createElement("input"); lab.type = "text"; lab.value = b.label || ""; lab.placeholder = "Etiqueta"; lab.maxLength = 30;
+      lab.addEventListener("change", () => { b.label = lab.value; app.store.save(); });
+      const zn = document.createElement("select"); app.ui.fillSelect(zn, ZONES, b.zone || "otro");
+      zn.addEventListener("change", () => { b.zone = zn.value; app.store.save(); });
+      row1.append(lab, zn);
+      const row2 = document.createElement("div"); row2.className = "row"; row2.style.marginTop = "8px";
+      const ac = document.createElement("select"); app.ui.fillSelect(ac, ACTIONS, b.action || "none");
+      ac.addEventListener("change", () => { b.action = ac.value; app.store.save(); });
+      const ls = document.createElement("button"); ls.className = "sm"; ls.textContent = "Escuchar";
+      ls.addEventListener("click", () => {
+        app.input.learnIdx = i; app.ui.msg("info", "Presiona ahora el botón físico para reasignar esta fila.");
+        ls.textContent = "Esperando…";
+      });
+      const tst = document.createElement("button"); tst.className = "sm"; tst.textContent = "Probar";
+      tst.addEventListener("click", () => app.engine.run(b.action));
+      const del = document.createElement("button"); del.className = "sm dng"; del.textContent = "Quitar";
+      del.addEventListener("click", () => { bs.splice(i, 1); app.store.save(); app.input.learnIdx = null; app.ui.renderTable(); });
+      row2.append(ac, ls, tst, del);
+      r.append(row1, row2); box.appendChild(r);
+    });
+  }
+}
+
+/* ============ Aplicación ============ */
+const app = {};
+(function main() {
+  app.ui = new UI();
+  app.log = new Logger($("log"));
+  app.store = new Store();
+  app.engine = new Engine(app.log, app.ui);
+  app.input = new InputCapture(app.store, app.engine, app.log, app.ui);
+  app.ble = new BluetoothLink(app.log, app.ui);
+  const S = app.store, ui = app.ui;
+
+  $("chkLearn").checked = S.state.autoLearn !== false;
+  $("chkRepeat").checked = S.state.ignoreRepeat !== false;
+  $("chkLearn").addEventListener("change", e => { S.state.autoLearn = e.target.checked; S.save(); });
+  $("chkRepeat").addEventListener("change", e => { S.state.ignoreRepeat = e.target.checked; S.save(); });
+
+  /* Zonas táctiles: prueban la primera asignación de la zona */
+  ZONES.slice(0, 7).forEach(([z]) => {
+    $("z-" + z).addEventListener("click", () => {
+      const b = S.profile.bindings.find(x => x.zone === z);
+      ui.flash(z); ui.setLast("touch:" + z);
+      if (b) app.engine.run(b.action); else ui.msg("info", "La zona no tiene asignación.");
+    });
+  });
+
+  /* Perfiles */
+  $("selProfile").addEventListener("change", e => { S.state.active = e.target.value; S.save(); app.input.learnIdx = null; ui.renderTable(); });
+  $("btnNew").addEventListener("click", () => {
+    const n = (prompt("Nombre del perfil (modelo de anillo):") || "").trim().slice(0, 40);
+    if (!n) return;
+    const p = { id: uid(), name: n, bindings: S.defaultProfile().bindings };
+    S.state.profiles.push(p); S.state.active = p.id; S.save(); ui.renderProfiles(); ui.renderTable();
+  });
+  $("btnRename").addEventListener("click", () => {
+    const n = (prompt("Nuevo nombre:", S.profile.name) || "").trim().slice(0, 40);
+    if (!n) return; S.profile.name = n; S.save(); ui.renderProfiles();
+  });
+  $("btnDelProfile").addEventListener("click", () => {
+    if (S.state.profiles.length < 2) { ui.msg("err", "Debe existir al menos un perfil."); return; }
+    if (!confirm(`¿Eliminar el perfil "${S.profile.name}"?`)) return;
+    S.state.profiles = S.state.profiles.filter(p => p.id !== S.state.active);
+    S.state.active = S.state.profiles[0].id; S.save(); ui.renderProfiles(); ui.renderTable();
+  });
+  $("btnExport").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(S.profile, null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "perfil-" + S.profile.name.replace(/[^\w-]+/g, "_") + ".json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+  $("btnImport").addEventListener("click", () => $("fileImport").click());
+  $("fileImport").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try {
+      const p = JSON.parse(await f.text());
+      if (!S.validProfile(p)) throw new Error("formato");
+      const clean = {
+        id: uid(), name: String(p.name).slice(0, 40), bindings: p.bindings.slice(0, 200).map(b => ({
+          sig: String(b.sig).slice(0, 60), zone: ZONES.some(z => z[0] === b.zone) ? b.zone : "otro",
+          action: ACTIONS.some(a => a[0] === b.action) ? b.action : "none", label: String(b.label || "").slice(0, 30)
+        }))
+      };
+      S.state.profiles.push(clean); S.state.active = clean.id; S.save(); ui.renderProfiles(); ui.renderTable();
+      ui.msg("ok", "Perfil importado: " + clean.name);
+    } catch (err) { ui.msg("err", "Archivo de perfil inválido."); }
+  });
+
+  /* Controles varios */
+  $("btnMedia").addEventListener("click", () => app.input.toggleKeeper());
+  $("btnBle").addEventListener("click", () => app.ble.connect());
+  $("btnBleOff").addEventListener("click", () => app.ble.disconnect());
+  $("fileAudio").addEventListener("change", e => { app.engine.setFiles(e.target.files); });
+  $("btnClear").addEventListener("click", () => app.log.clear());
+  $("btnCopy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(app.log.text()); ui.msg("ok", "Registro copiado."); }
+    catch (e) { ui.msg("err", "No se pudo copiar (" + e.name + ")."); }
+  });
+  window.addEventListener("ring:custom", e => app.log.add("CUSTOM", "evento #" + e.detail.n));
+
+  /* Texto de relleno para la zona de desplazamiento */
+  const sz = $("scrollZone");
+  for (let i = 1; i <= 12; i++) { const p = document.createElement("p"); p.textContent = `Línea de prueba ${i}: usa una acción de desplazamiento.`; sz.appendChild(p); }
+
+  ui.renderProfiles(); ui.renderTable(); ui.setVol(); ui.setPlayState();
+  ui.setBle(null, navigator.bluetooth ? "sin conectar" : "no disponible");
+  $("chBt").classList.toggle("warn", !navigator.bluetooth);
+  app.log.add("SYS", `listo · ${navigator.userAgent}`);
+
+  /* PWA: manifest dinámico + instalación + Service Worker */
+  (function pwa() {
+    try {
+      const mk = (s) => {
+        const c = document.createElement("canvas"); c.width = c.height = s; const x = c.getContext("2d");
+        x.fillStyle = "#000"; x.fillRect(0, 0, s, s); x.strokeStyle = "#3e91ff"; x.lineWidth = s * 0.09;
+        x.beginPath(); x.arc(s / 2, s / 2, s * 0.3, 0, Math.PI * 2); x.stroke();
+        x.fillStyle = "#3e91ff"; x.beginPath(); x.arc(s / 2, s / 2, s * 0.09, 0, Math.PI * 2); x.fill();
+        return c.toDataURL("image/png");
+      };
+      const base = location.href.split("#")[0].split("?")[0];
+      const manifest = {
+        name: "Ring Remapper", short_name: "RingMap", lang: "es-419", display: "standalone",
+        background_color: "#000000", theme_color: "#000000", start_url: base, scope: base.replace(/[^/]*$/, ""),
+        icons: [
+          { src: mk(192), sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: mk(512), sizes: "512x512", type: "image/png", purpose: "any" }
+        ]
+      };
+      const link = document.createElement("link"); link.rel = "manifest";
+      link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }));
+      document.head.appendChild(link);
+    } catch (e) { app.log.add("PWA", "manifest: " + e.message); }
+
+    let deferred = null;
+    window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; $("btnInstall").classList.remove("hide"); });
+    $("btnInstall").addEventListener("click", async () => {
+      if (!deferred) return; deferred.prompt();
+      try { await deferred.userChoice; } catch (e) {}
+      deferred = null; $("btnInstall").classList.add("hide");
+    });
+    window.addEventListener("appinstalled", () => app.log.add("PWA", "instalada"));
+
+    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+      navigator.serviceWorker.register("sw.js").then(
+        () => app.log.add("PWA", "Service Worker activo"),
+        (e) => app.log.add("PWA", "sin Service Worker (falta sw.js junto al HTML): " + e.message));
+    } else app.log.add("PWA", "Service Worker requiere http(s); abierta como archivo local");
+  })();
+})();
+</script>
+</body>
+</html>
