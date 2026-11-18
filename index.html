@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es-419">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0b0e">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Ring Remapper</title>
+<style>
+:root{--bg:#0a0b0e;--card:#14171f;--hov:#1c212c;--bd:#262c3a;--txt:#f3f4f6;--mut:#9ca3af;--acc:#3b82f6;--glow:rgba(59,130,246,.25);--ok:#10b981;--err:#ef4444;--r:20px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:16px system-ui,sans-serif}
+body{padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 32px);max-width:480px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;padding:20px 4px 12px}
+h1{font-size:1.4rem;margin:0;letter-spacing:-.02em}
+h2{font-size:1.05rem;margin:0 0 14px}
+.card{background:var(--card);border-radius:var(--r);padding:20px;margin:14px 0;border:1px solid var(--bd)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.badge{background:var(--hov);border:1px solid var(--bd);border-radius:14px;padding:10px 6px;text-align:center;font-size:.75rem;color:var(--mut)}
+.badge.on{border-color:var(--ok);color:var(--ok)}
+button,select,input[type=text]{font:inherit;color:var(--txt);background:var(--hov);border:1px solid var(--bd);border-radius:14px;min-height:48px;padding:0 14px}
+button{cursor:pointer;font-weight:500}
+button:active{transform:scale(.97)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.sm{min-height:44px;padding:0 12px;font-size:.85rem}
+button.dng{color:var(--err);border-color:rgba(239,68,68,.35)}
+button:disabled{opacity:.4}
+:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.ringbox{background:radial-gradient(circle,#1a202c,#0f131a);border-radius:24px;padding:24px;border:1px solid var(--bd);text-align:center}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,70px) 60px;gap:10px;max-width:280px;margin:0 auto}
+.pad button{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.2rem;border-radius:16px;background:var(--card);padding:0}
+.pad span{font-size:.65rem;color:var(--mut)}
+.pad .pressed{background:var(--acc);border-color:var(--acc);box-shadow:0 0 15px var(--glow)}
+#b-up{grid-area:1/2}#b-left{grid-area:2/1}#b-center{grid-area:2/2;border-radius:50%}#b-right{grid-area:2/3}#b-down{grid-area:3/2}#b-a{grid-area:4/1;border-radius:50%}#b-b{grid-area:4/3;border-radius:50%}
+.last{margin-top:16px;padding:12px;background:var(--hov);border-radius:14px;font:.9rem ui-monospace,monospace;border:1px solid var(--bd);overflow-wrap:anywhere}
+.mut{color:var(--mut);font-size:.85rem;line-height:1.4}
+.item{background:var(--hov);border-radius:16px;padding:14px;border:1px solid var(--bd);display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.item .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font:.85rem ui-monospace,monospace;color:var(--acc);overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.msg{margin:10px 0;padding:12px 16px;border-radius:14px;font-size:.9rem;line-height:1.4}
+.msg:empty{display:none}
+.msg.err{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.msg.ok{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.msg.info{background:rgba(59,130,246,.1);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
+.hide{display:none!important}
+#log{height:160px;overflow:auto;background:#050608;border-radius:14px;padding:12px;font:.75rem ui-monospace,monospace;white-space:pre-wrap;color:var(--mut);border:1px solid var(--bd);margin:0}
+#scrollZone{height:100px;overflow:auto;background:var(--hov);border-radius:14px;padding:12px;margin-top:12px;color:var(--mut);font-size:.85rem;border:1px solid var(--bd)}
+dialog{background:var(--card);color:var(--txt);border:1px solid var(--bd);border-radius:var(--r);padding:20px;width:min(360px,90vw)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+label.chk{display:flex;gap:10px;align-items:center;font-size:.9rem;min-height:44px}
+label.chk input{width:22px;height:22px;accent-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header><h1>Ring Remapper</h1><button id="btnInstall" class="sm pri hide">Instalar app</button></header>
+<div class="grid3" role="status">
+<div class="badge" id="chBt">BLE: desconectado</div>
+<div class="badge" id="chGp">Gamepad: no</div>
+<div class="badge" id="chMs">Multimedia: inactiva</div>
+</div>
+<div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+<section class="card">
+<h2>Panel del anillo</h2>
+<div class="ringbox">
+<div class="pad">
+<button id="b-up" aria-label="Arriba">▲<span>Arriba</span></button>
+<button id="b-left" aria-label="Izquierda">◀<span>Izq</span></button>
+<button id="b-center" aria-label="Centro">⏯<span>Centro</span></button>
+<button id="b-right" aria-label="Derecha">▶<span>Der</span></button>
+<button id="b-down" aria-label="Abajo">▼<span>Abajo</span></button>
+<button id="b-a" aria-label="Botón A">A<span>Botón A</span></button>
+<button id="b-b" aria-label="Botón B">B<span>Botón B</span></button>
+</div>
+<div class="last" id="last" aria-live="polite">Presiona un botón en tu anillo</div>
+</div>
+<div class="row" style="margin-top:14px">
+<button id="btnMedia" class="pri" style="flex:1 1 100%">Activar captura multimedia</button>
+<button id="btnWake" class="sm" style="flex:1 1 100%" aria-pressed="false">Mantener pantalla encendida: no</button>
+</div>
+<p class="mut">Empareja primero el anillo en los ajustes Bluetooth de Android. La captura multimedia usa un audio silencioso para recibir los botones de reproducción.</p>
+</section>
+
+<section class="card">
+<h2>Perfiles</h2>
+<select id="selProfile" aria-label="Perfil activo" style="width:100%"></select>
+<div class="row" style="margin-top:10px">
+<button id="btnNew" class="sm" style="flex:1">Nuevo</button>
+<button id="btnRename" class="sm" style="flex:1">Renombrar</button>
+<button id="btnExport" class="sm" style="flex:1">Exportar</button>
+<button id="btnImport" class="sm" style="flex:1">Importar</button>
+<button id="btnDel" class="sm dng" style="flex:1">Borrar</button>
+</div>
+<input type="file" id="fileImport" accept=".json,application/json" class="hide" aria-label="Archivo de perfil">
+<label class="chk"><input type="checkbox" id="chkLearn"> Agregar botones nuevos automáticamente</label>
+<label class="chk"><input type="checkbox" id="chkRepeat"> Ignorar repetición al mantener presionado</label>
+</section>
+
+<section class="card">
+<h2>Asignación de botones</h2>
+<p class="mut">Elige qué hace cada señal detectada.</p>
+<div id="tbl"></div>
+<p id="tblEmpty" class="mut hide">Aún no hay botones. Presiona uno en tu anillo.</p>
+</section>
+
+<section class="card">
+<h2>Zona de pruebas</h2>
+<div id="trk" class="mut" style="margin-bottom:10px">Sin pistas cargadas</div>
+<input type="file" id="fileAudio" accept="audio/*" multiple aria-label="Cargar audio" style="width:100%;margin-bottom:10px">
+<div class="row">
+<span class="badge" id="chVol" style="flex:1">Vol: 70%</span>
+<span class="badge" id="chPlay" style="flex:1">Detenido</span>
+<span class="badge" id="chCnt" style="flex:1">Eventos: 0</span>
+</div>
+<div id="scrollZone" tabindex="0" aria-label="Área de prueba de desplazamiento"><p>Línea 1</p><p>Línea 2</p><p>Línea 3</p><p>Línea 4</p><p>Línea 5</p><p>Línea 6</p></div>
+</section>
+
+<section class="card">
+<h2>Bluetooth LE</h2>
+<div class="row">
+<button id="btnBle" class="pri" style="flex:1">Conectar BLE</button>
+<button id="btnBleOff" class="sm dng hide">Desconectar</button>
+</div>
+<p class="mut" id="bleInfo">Los navegadores no dan acceso a los botones HID del anillo. Esta sección solo muestra nombre y batería.</p>
+</section>
+
+<section class="card">
+<h2>Consola</h2>
+<pre id="log" tabindex="0" aria-label="Registro de eventos"></pre>
+<div class="row" style="margin-top:10px">
+<button id="btnCopy" class="sm" style="flex:1">Copiar</button>
+<button id="btnClear" class="sm" style="flex:1">Limpiar</button>
+</div>
+</section>
+
+<dialog id="dlg"><form method="dialog" class="row" style="flex-direction:column;align-items:stretch">
+<p id="dlgMsg" style="margin:0"></p>
+<input type="text" id="dlgIn" maxlength="40" aria-label="Valor">
+<div class="row"><button value="cancel" class="sm" style="flex:1">Cancelar</button><button value="ok" class="sm pri" style="flex:1">Aceptar</button></div>
+</form></dialog>
+<audio id="player" preload="auto"></audio>
+<audio id="keeper" loop></audio>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10));
+const ACTIONS = [["none","Sin acción"],["playpause","Reproducir / Pausa"],["play","Reproducir"],["pause","Pausa"],["next","Siguiente pista"],["prev","Pista anterior"],["volup","Subir volumen"],["voldown","Bajar volumen"],["mute","Silenciar"],["scrollup","Desplazar arriba"],["scrolldown","Desplazar abajo"],["fullscreen","Pantalla completa"],["custom","Evento personalizado"]];
+const ZONES = [["up","Arriba"],["down","Abajo"],["left","Izquierda"],["right","Derecha"],["center","Centro"],["a","Botón A"],["b","Botón B"],["otro","Otro"]];
+const OK_ACT = new Set(ACTIONS.map(a => a[0])), OK_ZONE = new Set(ZONES.map(z => z[0]));
+const txt = (v, n) => String(v ?? "").replace(/[\u0000-\u001f\u200b-\u200f]/g, "").slice(0, n);
+
+class Logger {
+  constructor(el, max = 200) { this.el = el; this.max = max; this.lines = []; this.q = false; }
+  add(tag, s) {
+    const d = new Date();
+    this.lines.push(`${d.toLocaleTimeString("es-MX", { hour12: false })}.${String(d.getMilliseconds()).padStart(3, "0")} [${tag}] ${s}`);
+    if (this.lines.length > this.max) this.lines.shift();
+    if (!this.q) { this.q = true; requestAnimationFrame(() => { this.q = false; this.el.textContent = this.lines.join("\n"); this.el.scrollTop = this.el.scrollHeight; }); }
+  }
+  clear() { this.lines = []; this.el.textContent = ""; }
+  text() { return this.lines.join("\n"); }
+}
+
+class Store {
+  constructor(ui) {
+    this.ui = ui; this.key = "ringRemapper.v2"; this.warned = false; this.state = this.load();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  }
+  static clean(p) {
+    if (!p || typeof p !== "object" || !Array.isArray(p.bindings)) return null;
+    const seen = new Set(), bindings = [];
+    for (const b of p.bindings.slice(0, 64)) {
+      const sig = txt(b && b.sig, 60);
+      if (!sig || seen.has(sig)) continue;
+      seen.add(sig);
+      bindings.push({ sig, zone: OK_ZONE.has(b.zone) ? b.zone : "otro", action: OK_ACT.has(b.action) ? b.action : "none", label: txt(b.label, 40) });
+    }
+    return { id: uid(), name: txt(p.name, 40) || "Perfil", bindings };
+  }
+  defaultProfile() {
+    const b = (sig, zone, action, label) => ({ sig, zone, action, label });
+    return { id: uid(), name: "Mi anillo multimedia", bindings: [
+      b("key:ArrowUp","up","scrollup","Desplazar arriba"), b("key:ArrowDown","down","scrolldown","Desplazar abajo"),
+      b("key:ArrowLeft","left","prev","Pista anterior"), b("key:ArrowRight","right","next","Siguiente pista"),
+      b("key:Enter","center","playpause","Reproducir / Pausa"), b("key:MediaPlayPause","center","playpause","Media play/pause"),
+      b("ms:play","center","playpause","Media play"), b("ms:pause","center","playpause","Media pausa"),
+      b("ms:nexttrack","right","next","Media siguiente"), b("ms:previoustrack","left","prev","Media anterior")] };
+  }
+  load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(this.key) || "null");
+      if (s && Array.isArray(s.profiles)) {
+        const profiles = s.profiles.map(p => { const c = Store.clean(p); if (c && typeof p.id === "string") c.id = txt(p.id, 20) || c.id; return c; }).filter(Boolean);
+        if (profiles.length) return { profiles, active: profiles.some(p => p.id === s.active) ? s.active : profiles[0].id, autoLearn: s.autoLearn !== false, ignoreRepeat: s.ignoreRepeat !== false };
+      }
+    } catch (e) {}
+    const p = this.defaultProfile();
+    return { profiles: [p], active: p.id, autoLearn: true, ignoreRepeat: true };
+  }
+  save() {
+    try { localStorage.setItem(this.key, JSON.stringify(this.state)); return true; }
+    catch (e) { if (!this.warned) { this.warned = true; this.ui.msg("err", "No se pudo guardar. Los cambios solo durarán mientras la app esté abierta."); } return false; }
+  }
+  get profile() { return this.state.profiles.find(p => p.id === this.state.active) || this.state.profiles[0]; }
+}
+
+class Engine {
+  constructor(log, ui) {
+    this.log = log; this.ui = ui; this.p = $("player"); this.list = []; this.idx = -1; this.count = 0; this.p.volume = 0.7;
+    ["play", "pause"].forEach(ev => this.p.addEventListener(ev, () => ui.setPlay()));
+    this.p.addEventListener("ended", () => this.step(1));
+    this.p.addEventListener("error", () => { ui.msg("err", "No se pudo reproducir esta pista."); log.add("AUD", "Error de reproducción"); });
+  }
+  setFiles(files) {
+    this.list.forEach(t => URL.revokeObjectURL(t.url));
+    this.list = Array.from(files).map(f => ({ name: f.name, url: URL.createObjectURL(f) }));
+    this.idx = this.list.length ? 0 : -1; this.load();
+  }
+  load() {
+    if (this.idx < 0) { $("trk").textContent = "Sin pistas cargadas"; return; }
+    const t = this.list[this.idx];
+    this.p.src = t.url; $("trk").textContent = `Pista ${this.idx + 1} de ${this.list.length}: ${t.name}`;
+  }
+  step(d) {
+    if (!this.list.length) { this.ui.msg("info", "Carga audio en la zona de pruebas primero."); return; }
+    this.idx = (this.idx + d + this.list.length) % this.list.length; this.load(); this.p.play().catch(() => {});
+  }
+  run(a) {
+    const p = this.p, sz = $("scrollZone");
+    switch (a) {
+      case "playpause": if (!p.src) { this.ui.msg("info", "Carga audio en la zona de pruebas primero."); break; } p.paused ? p.play().catch(() => {}) : p.pause(); break;
+      case "play": if (p.src) p.play().catch(() => {}); break;
+      case "pause": p.pause(); break;
+      case "next": this.step(1); break;
+      case "prev": this.step(-1); break;
+      case "volup": p.volume = Math.min(1, +(p.volume + 0.1).toFixed(2)); this.ui.setVol(); break;
+      case "voldown": p.volume = Math.max(0, +(p.volume - 0.1).toFixed(2)); this.ui.setVol(); break;
+      case "mute": p.muted = !p.muted; this.ui.setVol(); break;
+      case "scrollup": sz.scrollBy({ top: -80, behavior: "smooth" }); break;
+      case "scrolldown": sz.scrollBy({ top: 80, behavior: "smooth" }); break;
+      case "fullscreen": document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : document.documentElement.requestFullscreen().catch(() => {}); break;
+      case "custom": $("chCnt").textContent = "Eventos: " + (++this.count); if (navigator.vibrate) navigator.vibrate(30); break;
+    }
+  }
+}
+
+class Input {
+  constructor(store, engine, log, ui) {
+    this.s = store; this.e = engine; this.log = log; this.ui = ui; this.learnIdx = null; this.learnT = 0;
+    this.gpPrev = {}; this.gpLoop = false; this.keeperOn = false; this.fired = new Map(); this.wl = null;
+    const typing = t => t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) && !["checkbox", "file"].includes(t.type);
+    window.addEventListener("keydown", e => this.onKey(e, typing(e.target)), true);
+    window.addEventListener("gamepadconnected", e => { log.add("GP", "Conectado: " + e.gamepad.id); ui.setGp(true); this.startGp(); });
+    window.addEventListener("gamepaddisconnected", () => { log.add("GP", "Desconectado"); ui.setGp(false); });
+    if (navigator.getGamepads && Array.from(navigator.getGamepads()).some(Boolean)) { ui.setGp(true); this.startGp(); }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      if (this.keeperOn) $("keeper").play().catch(() => {});
+      if (this.wlWanted) this.wake(true);
+    });
+  }
+  sig(e) { let n = e.code && e.code !== "Unidentified" ? e.code : e.key; if (!n || n === "Unidentified") n = "kc" + e.keyCode; return "key:" + n; }
+  onKey(e, typing) {
+    const sig = this.sig(e);
+    this.log.add("KEY", `code=${e.code || "-"} key=${e.key} → ${sig}`);
+    if (typing && this.learnIdx === null) return;
+    if (this.learnIdx !== null || this.s.profile.bindings.some(b => b.sig === sig)) e.preventDefault();
+    if (e.repeat && this.s.state.ignoreRepeat) return;
+    this.handle(sig);
+  }
+  stopLearn() { clearTimeout(this.learnT); this.learnIdx = null; this.ui.renderTable(); }
+  handle(sig) {
+    const prof = this.s.profile; this.ui.setLast(sig);
+    if (this.learnIdx !== null) {
+      const row = prof.bindings[this.learnIdx];
+      if (row) {
+        const dup = prof.bindings.findIndex((b, i) => b.sig === sig && i !== this.learnIdx);
+        if (dup >= 0) { this.ui.msg("err", "Esa señal ya está asignada a otra regla."); return; }
+        row.sig = sig; this.s.save(); this.ui.msg("ok", "Botón reasignado.");
+      }
+      this.stopLearn(); return;
+    }
+    const hits = prof.bindings.filter(b => b.sig === sig);
+    if (!hits.length) {
+      if (this.s.state.autoLearn && prof.bindings.length < 64) {
+        prof.bindings.push({ sig, zone: "otro", action: "none", label: "Botón nuevo" }); this.s.save(); this.ui.renderTable(); this.log.add("MAP", "Nuevo: " + sig);
+      }
+      return;
+    }
+    const now = performance.now();
+    hits.forEach(b => {
+      const k = b.zone + "|" + b.action;
+      if (now - (this.fired.get(k) || -1e3) < 150) return;
+      this.fired.set(k, now); this.ui.flash(b.zone); this.e.run(b.action);
+    });
+  }
+  startGp() {
+    if (this.gpLoop) return; this.gpLoop = true;
+    const tick = () => {
+      const pads = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter(Boolean);
+      if (!pads.length) { this.gpLoop = false; this.ui.setGp(false); return; }
+      if (document.visibilityState === "visible") for (const pad of pads) {
+        const prev = this.gpPrev[pad.index] || (this.gpPrev[pad.index] = {});
+        pad.buttons.forEach((b, i) => { if (b.pressed && !prev[i]) this.handle("gp:b" + i); prev[i] = b.pressed; });
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  silentWav() {
+    const rate = 8000, n = rate * 5, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+    new Uint8Array(buf, 44).fill(128);
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  async toggleKeeper() {
+    const a = $("keeper");
+    if (this.keeperOn) {
+      a.pause(); this.keeperOn = false; this.ui.setMs(false);
+      if ("mediaSession" in navigator) { navigator.mediaSession.playbackState = "none"; ["play","pause","nexttrack","previoustrack","stop"].forEach(x => { try { navigator.mediaSession.setActionHandler(x, null); } catch (e) {} }); }
+      return;
+    }
+    try {
+      if (!a.src) a.src = this.silentWav();
+      await a.play(); this.keeperOn = true; this.ui.setMs(true);
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: "Ring Remapper", artist: "Captura activa" });
+        navigator.mediaSession.playbackState = "playing";
+        ["play","pause","nexttrack","previoustrack","stop"].forEach(x => { try { navigator.mediaSession.setActionHandler(x, () => { this.handle("ms:" + x); if (this.keeperOn) navigator.mediaSession.playbackState = "playing"; }); } catch (e) {} });
+      }
+      this.ui.msg("ok", "Captura multimedia activa.");
+    } catch (e) { this.ui.msg("err", "Android bloqueó el audio. Toca el botón otra vez."); }
+  }
+  async wake(silent) {
+    if (!("wakeLock" in navigator)) { this.ui.msg("err", "Este navegador no permite mantener la pantalla encendida."); return; }
+    try {
+      this.wl = await navigator.wakeLock.request("screen"); this.wlWanted = true; this.ui.setWake(true);
+      this.wl.addEventListener("release", () => { if (document.visibilityState !== "visible") return; if (!this.wlWanted) this.ui.setWake(false); });
+    } catch (e) { if (!silent) this.ui.msg("err", "No se pudo mantener la pantalla encendida."); }
+  }
+  async unwake() { this.wlWanted = false; try { if (this.wl) await this.wl.release(); } catch (e) {} this.wl = null; this.ui.setWake(false); }
+}
+
+class Ble {
+  constructor(log, ui) { this.log = log; this.ui = ui; this.dev = null; this.tries = 0; this.manual = false; }
+  async open() {
+    const server = await this.dev.gatt.connect(), name = this.dev.name || "Dispositivo";
+    this.tries = 0; this.ui.setBle(true, name); $("btnBleOff").classList.remove("hide");
+    try {
+      const c = await (await server.getPrimaryService("battery_service")).getCharacteristic("battery_level");
+      const show = v => { $("bleInfo").textContent = `Conectado: ${name} · Batería: ${v.getUint8(0)}%`; };
+      show(await c.readValue());
+      try { await c.startNotifications(); c.addEventListener("characteristicvaluechanged", e => show(e.target.value)); } catch (e) {}
+    } catch (e) { $("bleInfo").textContent = `Conectado: ${name} (sin servicio de batería)`; }
+  }
+  async connect() {
+    if (!navigator.bluetooth) { this.ui.msg("err", "Web Bluetooth requiere Chrome o Samsung Internet con HTTPS."); return; }
+    try {
+      this.dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ["battery_service"] });
+      this.manual = false;
+      this.dev.addEventListener("gattserverdisconnected", () => this.lost());
+      await this.open();
+    } catch (e) { this.log.add("BLE", e.name + ": " + e.message); this.ui.msg("info", "Conexión Bluetooth cancelada o no disponible."); }
+  }
+  lost() {
+    this.ui.setBle(false, "desconectado"); $("btnBleOff").classList.add("hide");
+    if (this.manual || this.tries >= 3) return;
+    const wait = 1500 * 2 ** this.tries++;
+    this.log.add("BLE", `Reintentando en ${wait} ms (${this.tries}/3)`);
+    setTimeout(() => this.open().catch(e => { this.log.add("BLE", "Reintento falló: " + e.message); this.lost(); }), wait);
+  }
+  disconnect() { this.manual = true; if (this.dev && this.dev.gatt.connected) this.dev.gatt.disconnect(); }
+}
+
+class UI {
+  msg(kind, t) { const m = $("msg"); m.className = "msg " + kind; m.textContent = t; clearTimeout(this.mt); this.mt = setTimeout(() => { m.className = "msg"; m.textContent = ""; }, 5000); }
+  setLast(sig) { const l = $("last"); l.textContent = "Señal detectada: "; const s = document.createElement("strong"); s.style.color = "var(--acc)"; s.textContent = sig; l.appendChild(s); }
+  flash(z) { const el = $("b-" + z); if (!el) return; el.classList.add("pressed"); setTimeout(() => el.classList.remove("pressed"), 200); }
+  badge(id, text, on) { const c = $(id); c.textContent = text; c.classList.toggle("on", on); }
+  setGp(on) { this.badge("chGp", "Gamepad: " + (on ? "sí" : "no"), on); }
+  setMs(on) { this.badge("chMs", "Multimedia: " + (on ? "activa" : "inactiva"), on); $("btnMedia").textContent = on ? "Desactivar captura multimedia" : "Activar captura multimedia"; }
+  setBle(on, t) { this.badge("chBt", "BLE: " + t, on); }
+  setWake(on) { const b = $("btnWake"); b.textContent = "Mantener pantalla encendida: " + (on ? "sí" : "no"); b.setAttribute("aria-pressed", on); }
+  setVol() { const p = $("player"); $("chVol").textContent = p.muted ? "Vol: mute" : "Vol: " + Math.round(p.volume * 100) + "%"; }
+  setPlay() { $("chPlay").textContent = $("player").paused ? "Detenido" : "Reproduciendo"; }
+  renderProfiles() {
+    const sel = $("selProfile"); sel.textContent = "";
+    app.store.state.profiles.forEach(p => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+    sel.value = app.store.state.active;
+  }
+  renderTable() {
+    const box = $("tbl"), bs = app.store.profile.bindings; box.textContent = ""; $("tblEmpty").classList.toggle("hide", bs.length > 0);
+    const mk = (tag, cls, t) => { const e = document.createElement(tag); if (cls) e.className = cls; if (t !== undefined) e.textContent = t; return e; };
+    const sel = (opts, cur, label, fn) => { const s = mk("select"); s.setAttribute("aria-label", label); opts.forEach(([v, t]) => { const o = mk("option", "", t); o.value = v; s.appendChild(o); }); s.value = cur; s.onchange = () => { fn(s.value); app.store.save(); }; return s; };
+    bs.forEach((b, i) => {
+      const item = mk("div", "item"), hd = mk("div", "hd"), sig = mk("span", "", b.sig), del = mk("button", "sm dng", "Eliminar");
+      del.setAttribute("aria-label", "Eliminar " + b.sig);
+      del.onclick = () => { if (app.input.learnIdx !== null) app.input.stopLearn(); bs.splice(i, 1); app.store.save(); this.renderTable(); };
+      hd.append(sig, del);
+      const lbl = mk("input"); lbl.type = "text"; lbl.maxLength = 40; lbl.value = b.label; lbl.placeholder = "Nombre"; lbl.setAttribute("aria-label", "Nombre de " + b.sig);
+      lbl.onchange = () => { b.label = txt(lbl.value, 40); app.store.save(); };
+      const two = mk("div", "two"); two.append(lbl, sel(ZONES, b.zone, "Zona de " + b.sig, v => { b.zone = v; }));
+      const row = mk("div", "row"), act = sel(ACTIONS, b.action, "Acción de " + b.sig, v => { b.action = v; }); act.style.flex = "1";
+      const lb = mk("button", "sm", app.input.learnIdx === i ? "Esperando… (cancelar)" : "Reasignar botón");
+      lb.onclick = () => {
+        if (app.input.learnIdx === i) { app.input.stopLearn(); return; }
+        app.input.stopLearn(); app.input.learnIdx = i; this.renderTable();
+        this.msg("info", "Presiona el botón del anillo que quieres asignar (10 s).");
+        app.input.learnT = setTimeout(() => app.input.stopLearn(), 10000);
+      };
+      row.append(act, lb); item.append(hd, two, row); box.appendChild(item);
+    });
+  }
+}
+
+function ask(message, value) {
+  return new Promise(res => {
+    const d = $("dlg"), i = $("dlgIn");
+    $("dlgMsg").textContent = message; i.classList.toggle("hide", value === undefined); i.value = value ?? ""; d.returnValue = "";
+    d.onclose = () => res(d.returnValue === "ok" ? (value === undefined ? true : i.value.trim() || null) : null);
+    d.showModal(); if (value !== undefined) i.focus();
+  });
+}
+
+const app = {};
+(function main() {
+  app.ui = new UI(); const ui = app.ui;
+  app.log = new Logger($("log")); app.store = new Store(ui); app.engine = new Engine(app.log, ui);
+  app.input = new Input(app.store, app.engine, app.log, ui); app.ble = new Ble(app.log, ui);
+  const S = app.store;
+  $("chkLearn").checked = S.state.autoLearn; $("chkRepeat").checked = S.state.ignoreRepeat;
+  $("chkLearn").onchange = e => { S.state.autoLearn = e.target.checked; S.save(); };
+  $("chkRepeat").onchange = e => { S.state.ignoreRepeat = e.target.checked; S.save(); };
+  ZONES.slice(0, 7).forEach(([z]) => $("b-" + z).onclick = () => {
+    const b = S.profile.bindings.find(x => x.zone === z); ui.flash(z);
+    b ? app.engine.run(b.action) : ui.msg("info", "Esta zona no tiene acción asignada.");
+  });
+  $("selProfile").onchange = e => { app.input.stopLearn(); S.state.active = e.target.value; S.save(); ui.renderTable(); };
+  $("btnNew").onclick = async () => {
+    const name = await ask("Nombre del perfil nuevo", ""); if (!name) return;
+    if (S.state.profiles.length >= 20) { ui.msg("err", "Máximo 20 perfiles."); return; }
+    const p = S.defaultProfile(); p.name = txt(name, 40); S.state.profiles.push(p); S.state.active = p.id; S.save(); ui.renderProfiles(); ui.renderTable();
+  };
+  $("btnRename").onclick = async () => { const name = await ask("Nuevo nombre del perfil", S.profile.name); if (!name) return; S.profile.name = txt(name, 40); S.save(); ui.renderProfiles(); };
+  $("btnDel").onclick = async () => {
+    if (S.state.profiles.length < 2) { ui.msg("err", "Debe existir al menos un perfil."); return; }
+    if (!await ask(`¿Eliminar el perfil "${S.profile.name}"?`)) return;
+    S.state.profiles = S.state.profiles.filter(p => p.id !== S.state.active); S.state.active = S.state.profiles[0].id; S.save(); ui.renderProfiles(); ui.renderTable();
+  };
+  $("btnExport").onclick = () => {
+    const blob = new Blob([JSON.stringify({ app: "ring-remapper", v: 3, profile: S.profile }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "perfil-anillo.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+  $("btnImport").onclick = () => $("fileImport").click();
+  $("fileImport").onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    if (f.size > 100000) { ui.msg("err", "El archivo es demasiado grande."); return; }
+    try {
+      const raw = JSON.parse(await f.text()), p = Store.clean(raw && raw.profile ? raw.profile : raw);
+      if (!p) throw 0;
+      S.state.profiles.push(p); S.state.active = p.id; S.save(); ui.renderProfiles(); ui.renderTable(); ui.msg("ok", `Perfil "${p.name}" importado (${p.bindings.length} botones).`);
+    } catch (err) { ui.msg("err", "El archivo no es un perfil válido."); }
+  };
+  $("btnMedia").onclick = () => app.input.toggleKeeper();
+  $("btnWake").onclick = () => app.input.wlWanted ? app.input.unwake() : app.input.wake();
+  $("btnBle").onclick = () => app.ble.connect();
+  $("btnBleOff").onclick = () => app.ble.disconnect();
+  $("fileAudio").onchange = e => app.engine.setFiles(e.target.files);
+  $("btnClear").onclick = () => app.log.clear();
+  $("btnCopy").onclick = () => (navigator.clipboard ? navigator.clipboard.writeText(app.log.text()) : Promise.reject()).then(() => ui.msg("ok", "Registro copiado."), () => ui.msg("err", "No se pudo copiar el registro."));
+
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; $("btnInstall").classList.remove("hide"); });
+  $("btnInstall").onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $("btnInstall").classList.add("hide"); };
+  window.addEventListener("appinstalled", () => { $("btnInstall").classList.add("hide"); app.log.add("PWA", "Instalada"); });
+  window.addEventListener("online", () => app.log.add("NET", "En línea"));
+  window.addEventListener("offline", () => app.log.add("NET", "Sin conexión: la app sigue funcionando"));
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    const had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js").catch(e => app.log.add("PWA", "SW falló: " + e.message));
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (had) ui.msg("info", "Hay una versión nueva. Cierra y vuelve a abrir la app para usarla."); });
+  }
+  ui.renderProfiles(); ui.renderTable(); ui.setVol(); ui.setPlay(); ui.setWake(false);
+  app.log.add("SYS", "Aplicación lista");
+})();
+</script>
+</body>
+</html>
